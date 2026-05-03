@@ -1,0 +1,76 @@
+import 'package:dr_kit/dr_kit.dart';
+import 'package:example/lang/app_lang.dart';
+import 'package:example/lang/en.dart';
+import 'package:example/lang/kh.dart';
+import 'package:example/route/app_router.dart';
+import 'package:example/service/mock_net.dart';
+import 'package:example/service/mock_service.dart';
+import 'package:example/vm/home_vm.dart';
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  MyApp({super.key}) {
+    SpFeatureFlag.registerFlags({
+      SpFlag(enabled: false, key: 'new_version', description: "v1.0.0-beta.1"),
+    });
+  }
+
+  final appRouter = AppRouter();
+  final diContainer = ServiceLocator()
+    ..register(MockNet())
+    ..registerLazy((c) => MockService(mockNet: c.get<MockNet>()))
+    ..register(HomeVm());
+
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    Future.delayed(Duration(seconds: 3), () {
+      SpFeatureFlag.registerFlags({
+        SpFlag(
+          enabled: true,
+          key: 'new_version',
+          description: "v1.0.1-patch.1",
+        ),
+      });
+      log("Feature flags updated");
+    });
+
+    return SpKit(
+      locale: LocaleRegister<AppLang>()
+        ..register(En(lang: Lang.en))
+        ..register(Kh(lang: Lang.km))
+        ..changeLang(Lang.km),
+      serviceLocator: diContainer,
+      routerConfig: appRouter.config(),
+      themeMode: ThemeMode.dark,
+      // messageDialogWidget: DialgOverride(),
+    );
+  }
+}
+
+// ignore: must_be_immutable
+class DialgOverride extends MessageDialog {
+  DialgOverride({super.key});
+
+  @override
+  // TODO: implement alpha
+  int get alpha => 200;
+
+  @override
+  Widget buttonOk(BuildContext context) {
+    return Expanded(
+      child: ElevatedButton(onPressed: onOk, child: Text("IM OK")),
+    );
+  }
+
+  @override
+  Widget buttonCancel(BuildContext context) {
+    return Expanded(
+      child: ElevatedButton(onPressed: onOk, child: Text("Cancel")),
+    );
+  }
+}
